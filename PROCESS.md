@@ -79,11 +79,60 @@ through a real browser click against the production URL, confirming it
 survived a reload and appeared on `/my-events`, then removing it again — the
 `saved_events` table back at 0 rows, clean.
 
+## A genuine correction: from categorisation to discovery
+
+The four checkpoints above shipped a working browse/filter/save feed, and
+every check was green — but green checks don't verify the product idea, only
+the implementation of whatever idea you gave them. Reviewing the result
+against the brief and, directly, against ANU's own events site exposed a
+framing problem: the first version treated the problem as event
+categorisation; comparison against the existing ANU Events site showed that
+this was not enough, so the prototype shifted to student-centred discovery
+and progressive reduction. A category filter over an events list is what
+ANU's own site already is — five institutional topic tags don't answer a
+different question than the one that site already answers, they just answer
+it with nicer CSS.
+
+The fix wasn't a rebuild. It was the smallest coherent change that made the
+first screen ask "what do you want to get out of the next few days?" instead
+of "which category?": the same five slots that held institutional topics
+(Workshops, Talks, Careers, Social, Wellbeing) now hold student intents
+(Learn something, Build my career, Meet people, Try something new, Take a
+break), the bare `/` screen shows the five intent choices and *no* event
+cards at all — narrowing only starts once an intent is picked — and the old
+today/this-week/weekend filter is joined by mode (on campus/online) and
+price (free) as secondary, practical narrowing, never the primary axis. The
+existing persistence, save/unsave flow, and database layer didn't need to
+change and didn't: `saved_events` and the save/remove API routes are
+untouched. Landed in
+[`ab82ad8`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-pengyue-stella/commit/ab82ad8ecc2b882eded4559144ab183c901d7db5),
+which rewrites the schema (`intent`/`mode`/`is_free` replacing `category`),
+the seed data (12 events redistributed 2–3 per intent, so a small result set
+is a property of the data rather than a display cap), `index.astro`'s
+progressive-reduction template, and `spec/crit-7.test.ts`'s contract (the
+bare screen shows no cards; an intent narrows to a small, distinct set;
+mode/price narrow further; save-reload-remove still persists).
+
+Verified the same way as the original build, not assumed from green checks
+alone: `pnpm check` (typecheck + full suite) green before commit, the
+rendered page checked in a real browser (`agent-browser`) at both marking
+viewports locally, then deployed
+(`flyctl deploy --remote-only --ha=false -a comp4020-crit7-pengyue-stella`)
+and the whole flow re-verified against production — intent choice narrows
+results, mode/price filters narrow further, saving an event survives a
+reload of `/my-events`, and a direct `better-sqlite3` query over
+`flyctl ssh console` confirmed the live database actually holds the new
+12-event, intent-tagged dataset with `saved_events` back at 0 rows after the
+manual save/remove check.
+
 ## Where to look
 
 - `PLAN.md` — the scope decision, written before any UI code.
 - [`e58c01b`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-pengyue-stella/commit/e58c01b702a42e084e54a8c0575c0f22e5d7777c)`...`[`f9f8723`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-pengyue-stella/commit/f9f872388ea2a522b0e770041de4d5df9edef214) —
   the full range:
   [`e58c01b...f9f8723`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-pengyue-stella/compare/e58c01b...f9f8723).
-- `spec/crit-7.test.ts` — the persistence and filtering contract, run against
-  the built server with a throwaway database.
+- [`ab82ad8`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-pengyue-stella/commit/ab82ad8ecc2b882eded4559144ab183c901d7db5) —
+  the categorisation-to-discovery correction: intent-based schema, redesigned
+  progressive-reduction feed, rewritten spec and README.
+- `spec/crit-7.test.ts` — the persistence and progressive-reduction contract,
+  run against the built server with a throwaway database.
