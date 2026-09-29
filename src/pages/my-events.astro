@@ -1,0 +1,59 @@
+---
+import { listSavedEvents } from "../lib/db";
+import "../styles.css";
+
+const saved = listSavedEvents();
+
+const dateFormatter = new Intl.DateTimeFormat("en-AU", {
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+  hour: "numeric",
+  minute: "2-digit",
+});
+---
+
+<!doctype html>
+<html lang="en-AU">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>My Events — ANU Discover</title>
+  </head>
+  <body>
+    <nav aria-label="site">
+      <a href="/">Discover</a>
+      <a href="/my-events" aria-current="page">My Events</a>
+      <a href="/readme/">About</a>
+    </nav>
+    <main>
+      <h1>My Events</h1>
+      <p class="tagline">Events you've saved from Discover.</p>
+
+      {
+        saved.length === 0 ? (
+          <p class="empty-state">
+            You haven't saved any events yet. <a href="/">Browse Discover</a> to find something.
+          </p>
+        ) : (
+          <ul class="event-grid">
+            {saved.map((event) => (
+              <li class="event-card">
+                <p class="event-category">{event.category}</p>
+                <h2>{event.title}</h2>
+                <p class="event-when">{dateFormatter.format(new Date(event.startsAt))}</p>
+                <p class="event-location">{event.location}</p>
+                <p class="event-description">{event.description}</p>
+                <form method="POST" action="/api/saved-events/remove" class="save-form">
+                  <input type="hidden" name="eventId" value={event.id} />
+                  <input type="hidden" name="returnTo" value="/my-events" />
+                  <button type="submit">Remove</button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        )
+      }
+    </main>
+  </body>
+</html>

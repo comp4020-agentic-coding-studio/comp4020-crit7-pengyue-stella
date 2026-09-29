@@ -1,5 +1,5 @@
 ---
-import { listEvents, type When } from "../lib/db";
+import { listEvents, savedEventIds, type When } from "../lib/db";
 import { CATEGORIES, type Category } from "../lib/schema";
 import "../styles.css";
 
@@ -21,6 +21,8 @@ const whenParam = Astro.url.searchParams.get("when");
 const when = WHEN_OPTIONS.some((option) => option.value === whenParam) ? (whenParam as When) : undefined;
 
 const events = listEvents({ category, when });
+const saved = savedEventIds();
+const returnTo = Astro.url.pathname + Astro.url.search;
 
 function filterLink(next: { category?: Category | undefined; when?: When | undefined }): string {
   const params = new URLSearchParams();
@@ -105,6 +107,15 @@ const dateFormatter = new Intl.DateTimeFormat("en-AU", {
                 <p class="event-when">{dateFormatter.format(new Date(event.startsAt))}</p>
                 <p class="event-location">{event.location}</p>
                 <p class="event-description">{event.description}</p>
+                {saved.has(event.id) ? (
+                  <p class="saved-badge">Saved</p>
+                ) : (
+                  <form method="POST" action="/api/saved-events" class="save-form">
+                    <input type="hidden" name="eventId" value={event.id} />
+                    <input type="hidden" name="returnTo" value={returnTo} />
+                    <button type="submit">Save</button>
+                  </form>
+                )}
               </li>
             ))}
           </ul>

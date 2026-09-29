@@ -129,6 +129,27 @@ h1 {
   color: #55555f;
 }
 
+.save-form {
+  margin-block-start: 0.4rem;
+}
+
+.save-form button {
+  padding: 0.35rem 0.9rem;
+  border: 1px solid #0b5fff;
+  border-radius: 999px;
+  background: #0b5fff;
+  color: #fff;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.event-card .saved-badge {
+  margin-block-start: 0.4rem;
+  color: #1a7f37;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
 form {
   display: flex;
   flex-wrap: wrap;
