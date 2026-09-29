@@ -20,8 +20,9 @@ const html = (await readme.compiledContent()).replace(/(src|href)="public\//g, '
   </head>
   <body>
     <nav aria-label="site">
-      <a href="/">Guestbook</a>
-      <a href="/readme/">About</a>
+      <a href="/">Discover</a>
+      <a href="/my-events">My Events</a>
+      <a href="/readme/" aria-current="page">About</a>
     </nav>
     <main set:html={html} />
   </body>

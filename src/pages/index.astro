@@ -1,10 +1,44 @@
 ---
-import { listEvents } from "../lib/db";
+import { listEvents, type When } from "../lib/db";
+import { CATEGORIES, type Category } from "../lib/schema";
 import "../styles.css";
 
-// Checkpoint 1: persistence foundation only — the real Discover feed
-// (filters, cards, save) lands in the next checkpoint.
-const upcoming = listEvents();
+// Query-string-driven filtering: every filter state is a plain link (?category=...&when=...),
+// so the feed works with no client JS, degrades to nothing on a slow connection, and desktop
+// and mobile get the exact same behaviour for free.
+const WHEN_OPTIONS: { value: When; label: string }[] = [
+  { value: "today", label: "Today" },
+  { value: "week", label: "This week" },
+  { value: "weekend", label: "Weekend" },
+];
+
+const categoryParam = Astro.url.searchParams.get("category");
+const category = (CATEGORIES as readonly string[]).includes(categoryParam ?? "")
+  ? (categoryParam as Category)
+  : undefined;
+
+const whenParam = Astro.url.searchParams.get("when");
+const when = WHEN_OPTIONS.some((option) => option.value === whenParam) ? (whenParam as When) : undefined;
+
+const events = listEvents({ category, when });
+
+function filterLink(next: { category?: Category | undefined; when?: When | undefined }): string {
+  const params = new URLSearchParams();
+  const nextCategory = "category" in next ? next.category : category;
+  const nextWhen = "when" in next ? next.when : when;
+  if (nextCategory) params.set("category", nextCategory);
+  if (nextWhen) params.set("when", nextWhen);
+  const qs = params.toString();
+  return qs ? `/?${qs}` : "/";
+}
+
+const dateFormatter = new Intl.DateTimeFormat("en-AU", {
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+  hour: "numeric",
+  minute: "2-digit",
+});
 ---
 
 <!doctype html>
@@ -16,20 +50,66 @@ const upcoming = listEvents();
   </head>
   <body>
     <nav aria-label="site">
-      <a href="/">Discover</a>
+      <a href="/" aria-current="page">Discover</a>
+      <a href="/my-events">My Events</a>
       <a href="/readme/">About</a>
     </nav>
     <main>
       <h1>ANU Discover</h1>
-      <ul>
-        {
-          upcoming.map((event) => (
-            <li>
-              {event.title} — {event.category} — {event.startsAt} — {event.location}
-            </li>
-          ))
-        }
-      </ul>
+      <p class="tagline">Which events are relevant to me — not just what's on.</p>
+
+      <div class="filters">
+        <ul class="filter-row" aria-label="filter by category">
+          <li>
+            <a href={filterLink({ category: undefined })} aria-current={category === undefined ? "true" : undefined}>
+              All
+            </a>
+          </li>
+          {
+            CATEGORIES.map((c) => (
+              <li>
+                <a href={filterLink({ category: c })} aria-current={category === c ? "true" : undefined}>
+                  {c}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+        <ul class="filter-row" aria-label="filter by time">
+          <li>
+            <a href={filterLink({ when: undefined })} aria-current={when === undefined ? "true" : undefined}>
+              Any time
+            </a>
+          </li>
+          {
+            WHEN_OPTIONS.map((option) => (
+              <li>
+                <a href={filterLink({ when: option.value })} aria-current={when === option.value ? "true" : undefined}>
+                  {option.label}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+
+      {
+        events.length === 0 ? (
+          <p class="empty-state">No events match these filters — try widening them.</p>
+        ) : (
+          <ul class="event-grid">
+            {events.map((event) => (
+              <li class="event-card">
+                <p class="event-category">{event.category}</p>
+                <h2>{event.title}</h2>
+                <p class="event-when">{dateFormatter.format(new Date(event.startsAt))}</p>
+                <p class="event-location">{event.location}</p>
+                <p class="event-description">{event.description}</p>
+              </li>
+            ))}
+          </ul>
+        )
+      }
     </main>
   </body>
 </html>
