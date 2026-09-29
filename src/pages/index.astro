@@ -1,5 +1,5 @@
 ---
-import { listEvents, savedEventIds, type When } from "../lib/db";
+import { listColleges, listEvents, savedEventIds, type When } from "../lib/db";
 import { INTENTS, MODES, type Intent, type Mode } from "../lib/schema";
 import "../styles.css";
 
@@ -26,8 +26,15 @@ const mode = MODES.some((option) => option.value === modeParam) ? (modeParam as 
 
 const free = Astro.url.searchParams.get("free") === "true";
 
+// Colleges are scoped to intent only (not the practical filters), so the
+// chip list stays stable while a student toggles when/mode/free/college —
+// the same reason the when/mode chips themselves never disappear.
+const colleges = intent ? listColleges(intent) : [];
+const collegeParam = Astro.url.searchParams.get("college");
+const college = collegeParam && colleges.includes(collegeParam) ? collegeParam : undefined;
+
 // Nothing renders without a chosen intent — there is no "browse everything" state.
-const events = intent ? listEvents({ intent, when, mode, free }) : [];
+const events = intent ? listEvents({ intent, when, mode, free, college }) : [];
 const saved = savedEventIds();
 const returnTo = Astro.url.pathname + Astro.url.search;
 
@@ -36,16 +43,19 @@ function filterLink(next: {
   when?: When | undefined;
   mode?: Mode | undefined;
   free?: boolean | undefined;
+  college?: string | undefined;
 }): string {
   const params = new URLSearchParams();
   const nextIntent = "intent" in next ? next.intent : intent;
   const nextWhen = "when" in next ? next.when : when;
   const nextMode = "mode" in next ? next.mode : mode;
   const nextFree = "free" in next ? next.free : free;
+  const nextCollege = "college" in next ? next.college : college;
   if (nextIntent) params.set("intent", nextIntent);
   if (nextWhen) params.set("when", nextWhen);
   if (nextMode) params.set("mode", nextMode);
   if (nextFree) params.set("free", "true");
+  if (nextCollege) params.set("college", nextCollege);
   const qs = params.toString();
   return qs ? `/?${qs}` : "/";
 }
@@ -139,6 +149,25 @@ const intentLabel = INTENTS.find((option) => option.value === intent)?.label;
                   </a>
                 </li>
               </ul>
+              {colleges.length > 0 && (
+                <ul class="filter-row" aria-label="filter by college or school">
+                  <li>
+                    <a
+                      href={filterLink({ college: undefined })}
+                      aria-current={college === undefined ? "true" : undefined}
+                    >
+                      All colleges
+                    </a>
+                  </li>
+                  {colleges.map((name) => (
+                    <li>
+                      <a href={filterLink({ college: name })} aria-current={college === name ? "true" : undefined}>
+                        {name}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             {events.length === 0 ? (
@@ -147,19 +176,26 @@ const intentLabel = INTENTS.find((option) => option.value === intent)?.label;
               <ul class="event-grid">
                 {events.map((event) => (
                   <li class="event-card">
-                    <h2>{event.title}</h2>
-                    <p class="event-when">{dateFormatter.format(new Date(event.startsAt))}</p>
-                    <p class="event-location">{event.location}</p>
-                    <p class="event-description">{event.description}</p>
-                    {saved.has(event.id) ? (
-                      <p class="saved-badge">Saved</p>
-                    ) : (
-                      <form method="POST" action="/api/saved-events" class="save-form">
-                        <input type="hidden" name="eventId" value={event.id} />
-                        <input type="hidden" name="returnTo" value={returnTo} />
-                        <button type="submit">Save</button>
-                      </form>
-                    )}
+                    <a class="event-card-link" href={`/events/${event.id}`} aria-label={`View details: ${event.title}`} />
+                    <div class="event-card-media">
+                      <img src={event.imageUrl} alt="" width="400" height="240" loading="lazy" />
+                    </div>
+                    <div class="event-card-body">
+                      <p class="event-college">{event.college}</p>
+                      <h2>{event.title}</h2>
+                      <p class="event-when">{dateFormatter.format(new Date(event.startsAt))}</p>
+                      <p class="event-location">{event.location}</p>
+                      <p class="event-description">{event.description}</p>
+                      {saved.has(event.id) ? (
+                        <p class="saved-badge">Saved</p>
+                      ) : (
+                        <form method="POST" action="/api/saved-events" class="save-form">
+                          <input type="hidden" name="eventId" value={event.id} />
+                          <input type="hidden" name="returnTo" value={returnTo} />
+                          <button type="submit">Save</button>
+                        </form>
+                      )}
+                    </div>
                   </li>
                 ))}
               </ul>

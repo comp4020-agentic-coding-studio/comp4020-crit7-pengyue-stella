@@ -1,0 +1,96 @@
+---
+import { getEvent, savedEventIds } from "../../lib/db";
+import { INTENTS } from "../../lib/schema";
+import "../../styles.css";
+
+// A dead-end card was the problem this page fixes: every card now leads
+// somewhere. ANU Discover's job stops at "here's why this is worth going and
+// here's where to save it" — the official link is always the source of
+// truth for registration and full details, so this page never duplicates or
+// fakes that.
+const idParam = Astro.params.id;
+const id = Number(idParam);
+const event = Number.isInteger(id) ? getEvent(id) : undefined;
+
+if (!event) {
+  return Astro.redirect("/");
+}
+
+const saved = savedEventIds().has(event.id);
+const returnTo = Astro.url.pathname;
+const intentLabel = INTENTS.find((option) => option.value === event.intent)?.label;
+
+const dateFormatter = new Intl.DateTimeFormat("en-AU", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  hour: "numeric",
+  minute: "2-digit",
+});
+---
+
+<!doctype html>
+<html lang="en-AU">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{event.title} — ANU Discover</title>
+  </head>
+  <body>
+    <nav aria-label="site">
+      <a href="/">Discover</a>
+      <a href="/my-events">My Events</a>
+      <a href="/readme/">About</a>
+    </nav>
+    <main class="event-detail-main">
+      <a class="back-link" href="/">&larr; Back to Discover</a>
+      <article class="event-detail">
+        <img class="event-detail-image" src={event.imageUrl} alt="" width="400" height="240" />
+        <div class="event-detail-body">
+          <p class="event-college">{event.college}</p>
+          <h1>{event.title}</h1>
+          <p class="event-intent">{intentLabel}</p>
+
+          <dl class="event-meta">
+            <div>
+              <dt>When</dt>
+              <dd>{dateFormatter.format(new Date(event.startsAt))}</dd>
+            </div>
+            <div>
+              <dt>Where</dt>
+              <dd>{event.location}</dd>
+            </div>
+            <div>
+              <dt>Organised by</dt>
+              <dd>{event.college}</dd>
+            </div>
+          </dl>
+
+          <p class="event-detail-description">{event.description}</p>
+
+          {
+            saved ? (
+              <p class="saved-badge">Saved to My Events</p>
+            ) : (
+              <form method="POST" action="/api/saved-events" class="save-form">
+                <input type="hidden" name="eventId" value={event.id} />
+                <input type="hidden" name="returnTo" value={returnTo} />
+                <button type="submit">Save to My Events</button>
+              </form>
+            )
+          }
+
+          <div class="official-block">
+            <a class="official-link" href={event.officialUrl} target="_blank" rel="noopener noreferrer">
+              View official event &nearr;
+            </a>
+            <p class="official-note">
+              ANU Discover helps you find and shortlist events — the college above is the source for full details
+              and registration. This listing is a representative example, not a live booking.
+            </p>
+          </div>
+        </div>
+      </article>
+    </main>
+  </body>
+</html>

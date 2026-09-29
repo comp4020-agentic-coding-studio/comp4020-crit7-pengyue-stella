@@ -1,0 +1,10 @@
+<svg viewBox="0 0 400 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Code angle brackets with a slash">
+  <rect width="400" height="240" fill="#F5EEDD"/>
+  <rect x="1" y="1" width="398" height="238" fill="none" stroke="#000" stroke-width="2"/>
+  <g fill="none" stroke="#000" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="168,80 128,120 168,160"/>
+    <polyline points="232,80 272,120 232,160"/>
+  </g>
+  <line x1="212" y1="72" x2="188" y2="168" stroke="#BE830E" stroke-width="8" stroke-linecap="round"/>
+  <rect x="0" y="224" width="400" height="16" fill="#BE830E"/>
+</svg>

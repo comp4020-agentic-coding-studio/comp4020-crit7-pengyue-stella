@@ -37,9 +37,19 @@ export const events = sqliteTable("events", {
   isFree: int("is_free", { mode: "boolean" }).notNull().default(true),
   startsAt: text("starts_at").notNull(),
   location: text().notNull(),
+  // The organising college, school or service — shown on the card and detail
+  // page, and filterable, so "who runs this" is answerable without following
+  // the official link.
+  college: text().notNull().default("ANU"),
   // Why it's worth going, not what it is — the feed leads with relevance,
   // not a factual summary.
   description: text().notNull(),
+  // Card art. Local (public/images/events/...), not hotlinked, so it never
+  // depends on an external host being up.
+  imageUrl: text("image_url").notNull().default(""),
+  // Where the authoritative details and registration live — ANU Discover
+  // itself never fakes registration, only points at the real source.
+  officialUrl: text("official_url").notNull().default(""),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(datetime('now'))`),

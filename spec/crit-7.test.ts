@@ -99,3 +99,52 @@ describe("saved events", () => {
     expect(after).not.toContain(`value="${eventId}"`);
   });
 });
+
+describe("event detail page", () => {
+  it("shows the event's own info and a link to the official source", async () => {
+    const eventId = await firstUnsavedEventId("learn");
+    const html = await (await fetch(new URL(`/events/${eventId}`, baseUrl))).text();
+    expect(html).toContain(`name="eventId" value="${eventId}"`);
+    expect(html, "the detail page should offer a way back out to the official listing").toMatch(
+      /View official event/,
+    );
+  });
+
+  it("redirects a bad event id back to Discover instead of dead-ending", async () => {
+    const res = await fetch(new URL("/events/999999", baseUrl), { redirect: "manual" });
+    expect(res.status).toBe(302);
+  });
+
+  it("saving from the detail page persists it to My Events", async () => {
+    const eventId = await firstUnsavedEventId("career");
+
+    const res = await post(
+      "/api/saved-events",
+      new URLSearchParams({ eventId: String(eventId), returnTo: `/events/${eventId}` }),
+    );
+    expect(res.status).toBe(303);
+    expect(res.headers.get("location")).toBe(`/events/${eventId}`);
+
+    const myEvents = await (await fetch(new URL("/my-events", baseUrl))).text();
+    expect(myEvents).toContain(`value="${eventId}"`);
+  });
+});
+
+describe("college filter", () => {
+  it("narrows results to a single college once chosen", async () => {
+    const html = await (await fetch(new URL("/?intent=learn", baseUrl))).text();
+    const collegeMatch = html.match(/college=([^"&]+)/);
+    expect(collegeMatch, "expected at least one college filter link once an intent is chosen").toBeTruthy();
+    const college = decodeURIComponent(collegeMatch![1]);
+
+    const all = eventTitles(html);
+    const narrowed = eventTitles(
+      await (await fetch(new URL(`/?intent=learn&college=${encodeURIComponent(college)}`, baseUrl))).text(),
+    );
+    expect(narrowed.length, "a chosen college should still show something").toBeGreaterThan(0);
+    expect(narrowed.length, "a single college should narrow, not just relabel, the set").toBeLessThanOrEqual(
+      all.length,
+    );
+    expect(narrowed.every((title) => all.includes(title))).toBe(true);
+  });
+});

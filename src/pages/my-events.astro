@@ -41,16 +41,23 @@ const dateFormatter = new Intl.DateTimeFormat("en-AU", {
           <ul class="event-grid">
             {saved.map((event) => (
               <li class="event-card">
-                <p class="event-intent">{intentLabels.get(event.intent)}</p>
-                <h2>{event.title}</h2>
-                <p class="event-when">{dateFormatter.format(new Date(event.startsAt))}</p>
-                <p class="event-location">{event.location}</p>
-                <p class="event-description">{event.description}</p>
-                <form method="POST" action="/api/saved-events/remove" class="save-form">
-                  <input type="hidden" name="eventId" value={event.id} />
-                  <input type="hidden" name="returnTo" value="/my-events" />
-                  <button type="submit">Remove</button>
-                </form>
+                <a class="event-card-link" href={`/events/${event.id}`} aria-label={`View details: ${event.title}`} />
+                <div class="event-card-media">
+                  <img src={event.imageUrl} alt="" width="400" height="240" loading="lazy" />
+                </div>
+                <div class="event-card-body">
+                  <p class="event-college">{event.college}</p>
+                  <p class="event-intent">{intentLabels.get(event.intent)}</p>
+                  <h2>{event.title}</h2>
+                  <p class="event-when">{dateFormatter.format(new Date(event.startsAt))}</p>
+                  <p class="event-location">{event.location}</p>
+                  <p class="event-description">{event.description}</p>
+                  <form method="POST" action="/api/saved-events/remove" class="save-form">
+                    <input type="hidden" name="eventId" value={event.id} />
+                    <input type="hidden" name="returnTo" value="/my-events" />
+                    <button type="submit">Remove</button>
+                  </form>
+                </div>
               </li>
             ))}
           </ul>

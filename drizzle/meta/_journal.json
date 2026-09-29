@@ -36,6 +36,20 @@
       "when": 1790668762825,
       "tag": "0004_long_tusk",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1790670544369,
+      "tag": "0005_cooing_ironclad",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1790670544370,
+      "tag": "0006_reseed_event_content",
+      "breakpoints": true
     }
   ]
 }

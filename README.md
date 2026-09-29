@@ -1,64 +1,34 @@
 # ANU Discover
 
-ANU already has an events site that answers "what events exist?" — search,
-listings, a calendar. ANU Discover answers a different question: **what is
-actually worth my attention this week?** It's a student-centred discovery
-layer, not another events directory, built on the principle of **progressive
-reduction** — never show the whole catalogue at once.
+ANU Discover brings events from across ANU into one place. Explore talks,
+workshops, social events and opportunities from different colleges and
+schools, then save the ones you want to come back to.
 
-The first screen asks one question: what do you want to get out of the next
-few days? Five intents — Learn something, Build my career, Meet people, Try
-something new, Take a break — and nothing else. No cards, no calendar, no
-category browser. Only after you pick one does a small, matching set of
-events appear (2–3 cards, never 10–12), which you can optionally narrow
-further by time (today/this week/weekend), mode (on campus/online) and price
-(free). Saving is a real, persisted action to a personal My Events list
-that's still there next time you visit.
+## Start with what you're after
 
-## What good looks like here
+Instead of scrolling one long list, tell Discover what you're looking for —
+to learn something new, build your career, meet people, try something
+different, or simply take a break — and you'll see a short, relevant set of
+events for that. From there you can narrow further by time, whether it's on
+campus or online, whether it's free, and which college or school is running
+it.
 
-The brief asked for one focused slice done well, not a rebuild of the whole
-ANU events system — so the scope is deliberately small: pick an intent,
-narrow, save. No search, no ticketing, no per-event detail pages, no
-accounts. A card shows exactly what you need to decide whether to go: title,
-when, where, and a one-line description written to say *why it's worth
-going*, not what it factually is — nothing denser.
+## Every event is one tap from more
 
-Every filter is a plain link (`?intent=...&when=...&mode=...&free=...`), not
-a JS widget. That was a judgement call, not a requirement: it keeps desktop
-and mobile behaviour identical for free, works with JavaScript off, and
-matches "ask one question at a time" better than a client-side control that
-has to be built and tested twice. The intent, time, mode and price filters
-compose, because a student is usually narrowing on more than one axis at
-once — but intent always comes first and is never optional the way the
-others are: there is no "browse everything" state.
+Each card gives you the essentials at a glance: what it is, when, where, who's
+running it, and a picture to help it stand out. Tap through for the fuller
+picture — a longer description, the organising college or school, and a link
+to the official event page, which is always the place to go for registration
+and the final word on the details.
 
-Saving is a real, persisted action — a `POST` to a small API route that
-writes to the same SQLite database the feed reads from, not local state that
-disappears on reload. That persistence is enforced:
-[`spec/crit-7.test.ts`](spec/crit-7.test.ts) saves an event over HTTP and
-re-fetches My Events as an independent request to prove it survived, and
-removing an event is checked the same way.
+## Save what you want to come back to
 
-What's a judgement call versus what's enforced:
+Found something worth remembering? Save it to My Events and it'll be waiting
+for you next time you visit.
 
-- **Enforced** (`spec/`, CI): the bare discover screen shows no event cards
-  and all five intent choices; choosing an intent narrows to a small, distinct
-  set of events; the time/mode/price filters narrow that set further rather
-  than relabelling it; saving and removing an event actually persists across
-  requests; and the shared accessibility/navigation invariants every
-  deliverable carries.
-- **Judgement calls** (not something a test can hold you to): the five named
-  intents as *the* useful ways to frame "what do you want out of this"; a
-  single primary intent per event (rather than letting one event serve
-  several intents) as what keeps each intent's set naturally small; and the
-  visual design — intent tiles as the entry point, pill-shaped filter chips
-  once you're inside an intent, and a card grid that reflows instead of a
-  fixed table — as what "asks a question, then answers it" means for this
-  brief.
+## About the events shown
 
-The 12 seed events are realistic ANU-style mock data (talks, career fairs,
-society socials, research seminars) generated once at first boot — there's
-no scraping and no external API, per the brief. They're distributed 2–3 per
-intent, which is what keeps every intent's result set small by construction
-rather than by an arbitrary display cap.
+The events on ANU Discover are representative examples of the kind of things
+that happen across ANU — talks, workshops, careers fairs, socials and more —
+rather than a live feed of confirmed bookings. Always check the official event
+page linked from each listing for the current details before you make plans.
