@@ -1,23 +1,26 @@
 # Crit 7 reflection
 
-**The breakthrough that moved the work forward** was deciding, before writing
-any UI, that "discovery" meant replacing the calendar with a card feed rather
-than reskinning one. The brief's real risk wasn't a missing feature, it was
-scope creep into rebuilding the whole ANU events system. Writing that
-constraint down in `PLAN.md` before touching `index.astro` — cards, five
-categories, three time windows, one save action, nothing else — is what kept
-four checkpoints small enough to each land in a single green commit instead
-of one large one at the end.
+**The breakthrough that moved the work forward** was realising that
+"categories" was the wrong idea, not just an incomplete one. My first
+version had five category filters over an event list. It worked, the checks
+were green, but it was still basically what ANU's own events site already
+does. Comparing my pages against the real ANU Events site side by side is
+what showed me this. That site already lists and searches events. It
+doesn't help a student decide what's worth their time this week. That
+comparison is what turned category filters into student intents (learn
+something, build my career, meet people, try something new, take a break),
+and turned a nicer event list into ANU Discover.
 
-**What this changed about the developer I want to be** is how much I now
-distrust a passing test on its own. The save/persistence checkpoint had a
-green `vitest` suite well before I was actually confident it worked, and the
-thing that closed the gap wasn't more tests — it was clicking Save in a real
-browser, opening the SQLite file directly, and watching the row appear. The
-same happened in production: the local checks being green told me nothing
-about whether `flyctl deploy` had actually worked, so I re-ran the same
-browser-then-database check against the live URL, and it's how I caught that
-the deployed container had no `sqlite3` CLI at all. A test suite tells you
-your code does what you told it to; only looking at the running system and
-its actual data tells you the system does what you meant. That's now the
-default I reach for, not an extra step I add when something feels risky.
+The production migration bug reinforced the same lesson from a different
+angle. A green local build did not mean the product was actually safe: a
+reseed migration deleted events without clearing `saved_events` first,
+which would have broken the moment someone saved something. Local state
+never exposed that. Only checking the real production database did.
+
+**What this changed about who I want to be as a developer** is that I
+stopped trusting the first plausible thing an agent hands back. I now
+compare it against the real system it's supposed to improve on, ask whether
+it actually solves the student's problem, and check behaviour in the
+running app and its real data, not just in a test file. That habit is what
+caught both the categorisation problem and the migration risk, and it's the
+one I want to keep.
