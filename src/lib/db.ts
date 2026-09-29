@@ -4,7 +4,7 @@ import Database from "better-sqlite3";
 import { and, asc, eq, gte, lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
-import { type Category, type Event, events, savedEvents } from "./schema";
+import { type Event, type Intent, type Mode, events, savedEvents } from "./schema";
 import { thisWeekRange, todayRange, weekendRange } from "./schedule";
 
 // One SQLite file is the app's whole persistent state. In production
@@ -25,12 +25,14 @@ export const db = drizzle(client);
 // commit the migration it writes to drizzle/.
 migrate(db, { migrationsFolder: "./drizzle" });
 
-export type { Event, Category };
+export type { Event, Intent, Mode };
 export type When = "today" | "week" | "weekend";
 
 export interface EventFilter {
-  category?: Category;
+  intent?: Intent;
   when?: When;
+  mode?: Mode;
+  free?: boolean;
 }
 
 function whenRange(when: When | undefined, now: Date) {
@@ -47,10 +49,14 @@ function whenRange(when: When | undefined, now: Date) {
 }
 
 // The Discover feed: upcoming events only (nothing that's already fully
-// happened), soonest first, narrowed by category and/or time window.
+// happened), soonest first, narrowed by intent (required for a non-empty
+// result — see index.astro, which never calls this without one) and
+// optionally by time window, mode and price.
 export function listEvents(filter: EventFilter = {}, now: Date = new Date()): Event[] {
   const conditions = [gte(events.startsAt, todayRange(now).start.toISOString())];
-  if (filter.category) conditions.push(eq(events.category, filter.category));
+  if (filter.intent) conditions.push(eq(events.intent, filter.intent));
+  if (filter.mode) conditions.push(eq(events.mode, filter.mode));
+  if (filter.free) conditions.push(eq(events.isFree, true));
   const range = whenRange(filter.when, now);
   if (range) {
     conditions.push(gte(events.startsAt, range.start.toISOString()));
@@ -86,7 +92,9 @@ export function listSavedEvents(): Event[] {
     .select({
       id: events.id,
       title: events.title,
-      category: events.category,
+      intent: events.intent,
+      mode: events.mode,
+      isFree: events.isFree,
       startsAt: events.startsAt,
       location: events.location,
       description: events.description,
@@ -122,88 +130,120 @@ export function seedEvents(now: Date = new Date()): void {
     .values([
       {
         title: "AI in Research: A Hands-On Workshop",
-        category: "Technology & AI",
+        intent: "learn",
+        mode: "on_campus",
+        isFree: true,
         location: "Hackerspace, CSIT Building",
         description:
-          "Get hands-on with prompting, fine-tuning and eval basics before diving into your own project.",
+          "Two hands-on hours on prompting and evaluation you can use in your own project tonight — no slides, just building.",
         startsAt: at(start, 18),
       },
       {
-        title: "ANU Coding Club: Build Your First Web App",
-        category: "Technology & AI",
-        location: "Ian Ross Building",
-        description: "A beginner-friendly build-along: ship a small web app in one sitting.",
-        startsAt: at(day(wd1), 13),
-      },
-      {
-        title: "Tech Careers Fair with Industry Partners",
-        category: "Careers",
-        location: "Kambri, Marie Reay Building",
-        description: "Meet recruiters from tech, government and startups hiring ANU students.",
-        startsAt: at(day(weekendOffset), 10),
-      },
-      {
-        title: "Resume & LinkedIn Clinic",
-        category: "Careers",
-        location: "Careers Centre, Chancelry",
-        description: "Drop in for a 15-minute resume review before applications close.",
-        startsAt: at(day(wd2), 11),
-      },
-      {
-        title: "Meet the Grad Recruiters: Consulting Panel",
-        category: "Careers",
-        location: "Kambri Cultural Centre",
-        description: "Ask consulting recruiters what actually gets a grad application shortlisted.",
-        startsAt: at(day(21), 12),
-      },
-      {
         title: "Public Lecture: Quantum Computing Frontiers",
-        category: "Research Talks",
-        location: "Manning Clark Centre, Theatre 1",
-        description: "A public talk on where quantum computing is heading — no physics background required.",
+        intent: "learn",
+        mode: "online",
+        isFree: true,
+        location: "Livestreamed from Manning Clark Centre, Theatre 1",
+        description:
+          "One talk and you'll actually understand what people mean by \"quantum advantage\" — no physics background needed.",
         startsAt: at(start, 17, 30),
       },
       {
         title: "HDR Seminar Series: Modelling Climate Tipping Points",
-        category: "Research Talks",
+        intent: "learn",
+        mode: "on_campus",
+        isFree: true,
         location: "Fenner School of Environment & Society",
-        description: "This week's HDR seminar looks at tipping points in the climate system.",
+        description:
+          "An hour with someone who thinks about this full-time — a solid excuse for a break from your own reading list.",
         startsAt: at(day(wd3), 15),
       },
       {
-        title: "Three Minute Thesis Grand Final",
-        category: "Research Talks",
-        location: "Llewellyn Hall",
-        description: "Eight HDR finalists, three minutes each, one thesis explained to a general audience.",
-        startsAt: at(day(28), 18, 30),
+        title: "Tech Careers Fair with Industry Partners",
+        intent: "career",
+        mode: "on_campus",
+        isFree: true,
+        location: "Kambri, Marie Reay Building",
+        description:
+          "Recruiters actually hiring ANU students right now — worth an hour even if you're not job-hunting yet.",
+        startsAt: at(day(weekendOffset), 10),
+      },
+      {
+        title: "Resume & LinkedIn Clinic",
+        intent: "career",
+        mode: "online",
+        isFree: true,
+        location: "Zoom drop-in — link on booking",
+        description: "A 15-minute slot that fixes the one line on your resume you've been meaning to fix for a month.",
+        startsAt: at(day(wd2), 11),
+      },
+      {
+        title: "Meet the Grad Recruiters: Consulting Panel",
+        intent: "career",
+        mode: "on_campus",
+        isFree: true,
+        location: "Kambri Cultural Centre",
+        description:
+          "Straight answers on what actually gets a grad application shortlisted, from people who read them for a living.",
+        startsAt: at(day(21), 12),
+      },
+      {
+        title: "Wellbeing Wednesday: Free Breakfast & Chill",
+        intent: "meet",
+        mode: "on_campus",
+        isFree: true,
+        location: "Union Court",
+        description:
+          "Free pancakes and no agenda — one of the easiest ways to end up talking to people outside your own course.",
+        startsAt: at(day(wd1), 9),
       },
       {
         title: "Student Film Night: Shorts Showcase",
-        category: "Arts & Culture",
+        intent: "meet",
+        mode: "on_campus",
+        isFree: false,
         location: "Kambri Cinema",
-        description: "Student-made shorts on the big screen, followed by a Q&A with the filmmakers.",
+        description:
+          "A small $5 door charge covers popcorn — student-made shorts on the big screen, then a chat with the filmmakers after.",
         startsAt: at(day(weekendOffset + 1), 19),
       },
       {
+        title: "ANU Coding Club: Build Your First Web App",
+        intent: "try",
+        mode: "on_campus",
+        isFree: true,
+        location: "Ian Ross Building",
+        description: "Never written a line of code? You'll leave this session having shipped a small web app anyway.",
+        startsAt: at(day(wd1), 13),
+      },
+      {
         title: "ANU Art Society Exhibition Opening",
-        category: "Arts & Culture",
+        intent: "try",
+        mode: "on_campus",
+        isFree: true,
         location: "ANU School of Art & Design Gallery",
-        description: "Opening night for this semester's student exhibition — drinks and nibbles included.",
+        description: "Free drinks, student art, and zero expectation that you know anything about either.",
         startsAt: at(day(wd4), 17, 30),
       },
       {
         title: "Sunset Yoga on Kambri Lawns",
-        category: "Social & Wellbeing",
+        intent: "break",
+        mode: "on_campus",
+        isFree: true,
         location: "Kambri Lawns",
-        description: "A gentle outdoor session to stretch out the week — mats provided.",
+        description:
+          "Mats provided, no experience assumed — a gentle way to actually stop thinking about uni for forty minutes.",
         startsAt: at(day(weekendOffset), 8),
       },
       {
-        title: "Wellbeing Wednesday: Free Breakfast & Chill",
-        category: "Social & Wellbeing",
-        location: "Union Court",
-        description: "Free pancakes, board games and a quiet space to decompress mid-week.",
-        startsAt: at(day(wd1), 9),
+        title: "Three Minute Thesis Grand Final",
+        intent: "break",
+        mode: "on_campus",
+        isFree: true,
+        location: "Llewellyn Hall",
+        description:
+          "Eight theses explained in three minutes each — genuinely entertaining, and you don't have to think about your own work.",
+        startsAt: at(day(28), 18, 30),
       },
     ])
     .run();

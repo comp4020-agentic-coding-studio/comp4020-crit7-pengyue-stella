@@ -1,8 +1,10 @@
 ---
 import { listSavedEvents } from "../lib/db";
+import { INTENTS } from "../lib/schema";
 import "../styles.css";
 
 const saved = listSavedEvents();
+const intentLabels = new Map(INTENTS.map((option) => [option.value, option.label]));
 
 const dateFormatter = new Intl.DateTimeFormat("en-AU", {
   weekday: "short",
@@ -39,7 +41,7 @@ const dateFormatter = new Intl.DateTimeFormat("en-AU", {
           <ul class="event-grid">
             {saved.map((event) => (
               <li class="event-card">
-                <p class="event-category">{event.category}</p>
+                <p class="event-intent">{intentLabels.get(event.intent)}</p>
                 <h2>{event.title}</h2>
                 <p class="event-when">{dateFormatter.format(new Date(event.startsAt))}</p>
                 <p class="event-location">{event.location}</p>

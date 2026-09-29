@@ -1,35 +1,51 @@
 ---
 import { listEvents, savedEventIds, type When } from "../lib/db";
-import { CATEGORIES, type Category } from "../lib/schema";
+import { INTENTS, MODES, type Intent, type Mode } from "../lib/schema";
 import "../styles.css";
 
-// Query-string-driven filtering: every filter state is a plain link (?category=...&when=...),
-// so the feed works with no client JS, degrades to nothing on a slow connection, and desktop
-// and mobile get the exact same behaviour for free.
+// Progressive reduction: the first screen asks one question — what the
+// student wants out of the next few days — and shows no events at all until
+// they answer it. Only once an intent narrows the catalogue to a small set
+// do the practical filters (when/mode/free) appear, to narrow further rather
+// than to browse. Every state is still a plain link (?intent=&when=...), so
+// the flow works with no client JS and desktop/mobile behave identically.
 const WHEN_OPTIONS: { value: When; label: string }[] = [
   { value: "today", label: "Today" },
   { value: "week", label: "This week" },
   { value: "weekend", label: "Weekend" },
 ];
 
-const categoryParam = Astro.url.searchParams.get("category");
-const category = (CATEGORIES as readonly string[]).includes(categoryParam ?? "")
-  ? (categoryParam as Category)
-  : undefined;
+const intentParam = Astro.url.searchParams.get("intent");
+const intent = INTENTS.some((option) => option.value === intentParam) ? (intentParam as Intent) : undefined;
 
 const whenParam = Astro.url.searchParams.get("when");
 const when = WHEN_OPTIONS.some((option) => option.value === whenParam) ? (whenParam as When) : undefined;
 
-const events = listEvents({ category, when });
+const modeParam = Astro.url.searchParams.get("mode");
+const mode = MODES.some((option) => option.value === modeParam) ? (modeParam as Mode) : undefined;
+
+const free = Astro.url.searchParams.get("free") === "true";
+
+// Nothing renders without a chosen intent — there is no "browse everything" state.
+const events = intent ? listEvents({ intent, when, mode, free }) : [];
 const saved = savedEventIds();
 const returnTo = Astro.url.pathname + Astro.url.search;
 
-function filterLink(next: { category?: Category | undefined; when?: When | undefined }): string {
+function filterLink(next: {
+  intent?: Intent | undefined;
+  when?: When | undefined;
+  mode?: Mode | undefined;
+  free?: boolean | undefined;
+}): string {
   const params = new URLSearchParams();
-  const nextCategory = "category" in next ? next.category : category;
+  const nextIntent = "intent" in next ? next.intent : intent;
   const nextWhen = "when" in next ? next.when : when;
-  if (nextCategory) params.set("category", nextCategory);
+  const nextMode = "mode" in next ? next.mode : mode;
+  const nextFree = "free" in next ? next.free : free;
+  if (nextIntent) params.set("intent", nextIntent);
   if (nextWhen) params.set("when", nextWhen);
+  if (nextMode) params.set("mode", nextMode);
+  if (nextFree) params.set("free", "true");
   const qs = params.toString();
   return qs ? `/?${qs}` : "/";
 }
@@ -41,6 +57,8 @@ const dateFormatter = new Intl.DateTimeFormat("en-AU", {
   hour: "numeric",
   minute: "2-digit",
 });
+
+const intentLabel = INTENTS.find((option) => option.value === intent)?.label;
 ---
 
 <!doctype html>
@@ -58,67 +76,95 @@ const dateFormatter = new Intl.DateTimeFormat("en-AU", {
     </nav>
     <main>
       <h1>ANU Discover</h1>
-      <p class="tagline">Which events are relevant to me — not just what's on.</p>
+      {
+        intent ? (
+          <p class="tagline">
+            Showing what's worth your attention for: <strong>{intentLabel}</strong> — <a href="/">choose a different goal</a>
+          </p>
+        ) : (
+          <p class="tagline">What do you want to get out of the next few days?</p>
+        )
+      }
 
-      <div class="filters">
-        <ul class="filter-row" aria-label="filter by category">
-          <li>
-            <a href={filterLink({ category: undefined })} aria-current={category === undefined ? "true" : undefined}>
-              All
-            </a>
-          </li>
-          {
-            CATEGORIES.map((c) => (
+      {
+        !intent ? (
+          <ul class="intent-grid" aria-label="what do you want to do">
+            {INTENTS.map((option) => (
               <li>
-                <a href={filterLink({ category: c })} aria-current={category === c ? "true" : undefined}>
-                  {c}
-                </a>
-              </li>
-            ))
-          }
-        </ul>
-        <ul class="filter-row" aria-label="filter by time">
-          <li>
-            <a href={filterLink({ when: undefined })} aria-current={when === undefined ? "true" : undefined}>
-              Any time
-            </a>
-          </li>
-          {
-            WHEN_OPTIONS.map((option) => (
-              <li>
-                <a href={filterLink({ when: option.value })} aria-current={when === option.value ? "true" : undefined}>
+                <a class="intent-tile" href={filterLink({ intent: option.value })}>
                   {option.label}
                 </a>
               </li>
-            ))
-          }
-        </ul>
-      </div>
-
-      {
-        events.length === 0 ? (
-          <p class="empty-state">No events match these filters — try widening them.</p>
-        ) : (
-          <ul class="event-grid">
-            {events.map((event) => (
-              <li class="event-card">
-                <p class="event-category">{event.category}</p>
-                <h2>{event.title}</h2>
-                <p class="event-when">{dateFormatter.format(new Date(event.startsAt))}</p>
-                <p class="event-location">{event.location}</p>
-                <p class="event-description">{event.description}</p>
-                {saved.has(event.id) ? (
-                  <p class="saved-badge">Saved</p>
-                ) : (
-                  <form method="POST" action="/api/saved-events" class="save-form">
-                    <input type="hidden" name="eventId" value={event.id} />
-                    <input type="hidden" name="returnTo" value={returnTo} />
-                    <button type="submit">Save</button>
-                  </form>
-                )}
-              </li>
             ))}
           </ul>
+        ) : (
+          <>
+            <div class="filters">
+              <ul class="filter-row" aria-label="filter by time">
+                <li>
+                  <a href={filterLink({ when: undefined })} aria-current={when === undefined ? "true" : undefined}>
+                    Any time
+                  </a>
+                </li>
+                {WHEN_OPTIONS.map((option) => (
+                  <li>
+                    <a
+                      href={filterLink({ when: option.value })}
+                      aria-current={when === option.value ? "true" : undefined}
+                    >
+                      {option.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+              <ul class="filter-row" aria-label="filter by mode and price">
+                <li>
+                  <a href={filterLink({ mode: undefined })} aria-current={mode === undefined ? "true" : undefined}>
+                    On campus or online
+                  </a>
+                </li>
+                {MODES.map((option) => (
+                  <li>
+                    <a
+                      href={filterLink({ mode: option.value })}
+                      aria-current={mode === option.value ? "true" : undefined}
+                    >
+                      {option.label}
+                    </a>
+                  </li>
+                ))}
+                <li>
+                  <a href={filterLink({ free: free ? undefined : true })} aria-current={free ? "true" : undefined}>
+                    Free
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            {events.length === 0 ? (
+              <p class="empty-state">Nothing matches these filters right now — try widening them.</p>
+            ) : (
+              <ul class="event-grid">
+                {events.map((event) => (
+                  <li class="event-card">
+                    <h2>{event.title}</h2>
+                    <p class="event-when">{dateFormatter.format(new Date(event.startsAt))}</p>
+                    <p class="event-location">{event.location}</p>
+                    <p class="event-description">{event.description}</p>
+                    {saved.has(event.id) ? (
+                      <p class="saved-badge">Saved</p>
+                    ) : (
+                      <form method="POST" action="/api/saved-events" class="save-form">
+                        <input type="hidden" name="eventId" value={event.id} />
+                        <input type="hidden" name="returnTo" value={returnTo} />
+                        <button type="submit">Save</button>
+                      </form>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
         )
       }
     </main>
