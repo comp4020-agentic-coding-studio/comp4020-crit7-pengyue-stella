@@ -139,6 +139,77 @@ h2 {
   color: var(--paper);
 }
 
+.week-strip {
+  margin-block-end: 2.25rem;
+}
+
+.week-strip-heading {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.week-strip-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr));
+  gap: 0.6rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.week-day-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  padding: 0.7rem 0.5rem;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  color: var(--ink);
+  text-decoration: none;
+  text-align: center;
+}
+
+.week-day-tile:hover,
+.week-day-tile:focus-visible {
+  border-color: var(--gold);
+}
+
+.week-day-tile[aria-current="true"] {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.week-day-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.week-day-date {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.week-day-tile[aria-current="true"] .week-day-date {
+  color: var(--paper-tint);
+}
+
+.week-day-count {
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+  color: var(--gold);
+}
+
+.week-day-tile[aria-current="true"] .week-day-count {
+  color: var(--gold);
+}
+
 .event-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));

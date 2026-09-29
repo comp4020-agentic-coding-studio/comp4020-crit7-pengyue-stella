@@ -35,3 +35,11 @@ export function weekendRange(now: Date = new Date()): Range {
   const saturday = addDays(start, toSaturday);
   return { start: saturday, end: addDays(saturday, 2) };
 }
+
+// A single day within the rolling 7-day window the "This week at ANU" strip
+// shows — offset 0 is today, 6 is six days out. Used both to filter the feed
+// to one day and to build the strip's own date labels.
+export function dayRange(now: Date, offset: number): Range {
+  const start = addDays(startOfDay(now), offset);
+  return { start, end: addDays(start, 1) };
+}
